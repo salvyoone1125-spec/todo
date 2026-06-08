@@ -21,7 +21,8 @@
   --font:'M PLUS 1',-apple-system,sans-serif;
 }
 html,body{height:100%;}
-body{font-family:var(--font);background:var(--bg);color:var(--tp);max-width:430px;margin:0 auto;min-height:100dvh;}
+body{font-family:var(--font);background:var(--bg);color:var(--tp);max-width:430px;margin:0 auto;min-height:100dvh;position:relative;}
+#bgLayer{position:fixed;inset:0;z-index:-1;background-size:cover;background-position:center;background-repeat:no-repeat;max-width:430px;margin:0 auto;pointer-events:none;}
 *{scrollbar-width:none;} *::-webkit-scrollbar{display:none;}
 
 .page{display:none;flex-direction:column;min-height:100dvh;padding-bottom:var(--nh);}
@@ -304,6 +305,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--tp);max-width:430p
 </style>
 </head>
 <body>
+
+<div id="bgLayer"></div>
 
 <!-- HOME -->
 <div class="page active" id="pgHome">
@@ -696,8 +699,9 @@ function goPage(p){
 
 // ═══ WEEK ═══
 function getWeek(){
-  const d=new Date(viewD);
-  const sun=new Date(d);sun.setDate(d.getDate()-d.getDay()+wOff*7);
+  const today=new Date();
+  const sun=new Date(today);
+  sun.setDate(today.getDate()-today.getDay()+wOff*7);
   return Array.from({length:7},(_,i)=>{const x=new Date(sun);x.setDate(sun.getDate()+i);return x;});
 }
 let calMode='w'; // 'w' = week strip, 'm' = inline month
@@ -1080,8 +1084,10 @@ function renderTodo(){
   const todos=[...(S.todos[curDK]||[]),...repeating];
   const tcomp=S.tcomp[curDK]||{};
   let vis=S.settings.hideDoneT?todos.filter(t=>!tcomp[t.id]):todos;
-  // 完了を下へ
-  vis=[...vis.filter(t=>!tcomp[t.id]),...vis.filter(t=>!!tcomp[t.id])];
+  // 重要度高い順 → 完了を下へ
+  const undone=vis.filter(t=>!tcomp[t.id]).sort((a,b)=>(b.imp||0)-(a.imp||0));
+  const done=vis.filter(t=>!!tcomp[t.id]);
+  vis=[...undone,...done];
   const main=document.getElementById('mainC');
   if(!vis.length){
     main.innerHTML=`<div class="empty"><div class="empty-icon">✅</div><div>To-doを追加しましょう</div></div>`;
@@ -1192,8 +1198,10 @@ function lpEnd(){ clearTimeout(lpTimer); }
       const base=dFromDK(curDK);
       const nd=new Date(base);
       nd.setDate(base.getDate()+(dx<0?1:-1));
-      curDK=dk(nd); viewD=new Date(nd);
-      const todSun=new Date();todSun.setDate(new Date().getDate()-new Date().getDay());
+      curDK=dk(nd);
+      // wOff = 選択日の週と今週の差
+      const today=new Date();
+      const todSun=new Date(today);todSun.setDate(today.getDate()-today.getDay());
       const selSun=new Date(nd);selSun.setDate(nd.getDate()-nd.getDay());
       wOff=Math.round((selSun-todSun)/(7*86400000));
       renderW(); renderC();
@@ -1664,15 +1672,17 @@ function setTLP(p){tlPer=p;renderTL();}
 
 // ═══ SETTINGS ═══
 function renderSet(){
-  const bg=S.settings.wallpaper?`url(${S.settings.wallpaper}) center/cover`:'var(--bg)';
+  const rtBg=localStorage.getItem('rtBg');
+  const bgPreview=rtBg?`url(${rtBg}) center/cover`:'var(--bg)';
+  const curOp=S.settings.bgOpacity!=null?S.settings.bgOpacity:0.4;
   document.getElementById('setC').innerHTML=`<div class="set-wrap">
 
     <!-- Theme card -->
     <div style="display:flex;gap:10px;margin-bottom:4px;">
-      <div style="flex:1;min-height:120px;border-radius:16px;overflow:hidden;background:${bg};
+      <div style="flex:1;min-height:120px;border-radius:16px;overflow:hidden;background:${bgPreview};
         border:1.5px solid var(--sep);display:flex;align-items:center;justify-content:center;cursor:pointer;"
         onclick="pickWallpaper()">
-        ${S.settings.wallpaper?'':'<span style="font-size:36px;opacity:.3;">🖼</span>'}
+        ${rtBg?'':'<span style="font-size:36px;opacity:.3;">🖼</span>'}
         <input type="file" id="wpInput" accept="image/*" style="display:none;" onchange="loadWallpaper(event)">
       </div>
       <div style="width:130px;background:var(--card);border-radius:16px;
@@ -1694,11 +1704,20 @@ function renderSet(){
         <div class="srow-label">背景画像を選択</div>
         <span style="color:var(--ts);font-size:13px;">›</span>
       </div>
-      <div class="srow" style="cursor:pointer;" onclick="resetWallpaper()">
-        <span class="srow-icon">✕</span>
-        <div class="srow-label">背景画像をリセット</div>
-        <span style="color:var(--ts);font-size:13px;">›</span>
+      ${rtBg?`<div class="srow">
+        <span class="srow-icon">🔆</span>
+        <div class="srow-label">背景の透過度</div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <input type="range" min="0.05" max="1" step="0.05" value="${curOp}"
+            style="width:90px;" oninput="setBgOpacity(this.value)">
+          <span id="bgOpVal" style="font-size:13px;color:var(--ts);min-width:32px;">${Math.round(curOp*100)}%</span>
+        </div>
       </div>
+      <div class="srow" style="cursor:pointer;" onclick="resetWallpaper()">
+        <span class="srow-icon">🗑</span>
+        <div class="srow-label">背景画像を削除</div>
+        <span style="color:var(--ts);font-size:13px;">›</span>
+      </div>`:''}
       <div class="srow" style="cursor:pointer;" onclick="openThemePicker()">
         <span class="srow-icon">🎨</span>
         <div class="srow-label">テーマを変更</div>
@@ -1805,6 +1824,22 @@ function applyTheme(i){
   openThemePicker(); // re-render grid with new selection
 }
 
+function applyBg(){
+  const layer=document.getElementById('bgLayer');
+  if(!layer) return;
+  const wp=localStorage.getItem('rtBg');
+  const op=S.settings.bgOpacity!=null?S.settings.bgOpacity:0.4;
+  if(wp){
+    layer.style.backgroundImage=`url(${wp})`;
+    layer.style.opacity=op;
+    document.body.style.background='transparent';
+  } else {
+    layer.style.backgroundImage='none';
+    layer.style.opacity=1;
+    document.body.style.background='';
+  }
+}
+
 function initTheme(){
   const i=S.settings.themeIdx||0;
   if(i>0){
@@ -1813,6 +1848,7 @@ function initTheme(){
     document.documentElement.style.setProperty('--acl',t.ac2+'33');
     document.documentElement.style.setProperty('--bg',t.bg);
   }
+  applyBg();
 }
 
 function pickWallpaper(){ document.getElementById('wpInput').click(); }
@@ -1820,12 +1856,22 @@ function loadWallpaper(e){
   const file=e.target.files[0]; if(!file) return;
   const reader=new FileReader();
   reader.onload=ev=>{
-    S.settings.wallpaper=ev.target.result;
-    saveS(); renderSet();
+    localStorage.setItem('rtBg',ev.target.result);
+    if(S.settings.bgOpacity==null) S.settings.bgOpacity=0.4;
+    saveS(); applyBg(); renderSet();
   };
   reader.readAsDataURL(file);
 }
-function resetWallpaper(){ delete S.settings.wallpaper; saveS(); renderSet(); }
+function resetWallpaper(){
+  localStorage.removeItem('rtBg');
+  delete S.settings.wallpaper;
+  saveS(); applyBg(); renderSet();
+}
+function setBgOpacity(v){
+  S.settings.bgOpacity=parseFloat(v);
+  document.getElementById('bgOpVal').textContent=Math.round(v*100)+'%';
+  saveS(); applyBg();
+}
 
 function downloadHandover(){
   const today=new Date().toLocaleDateString('ja-JP');
