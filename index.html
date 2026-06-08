@@ -1521,18 +1521,18 @@ function saveSD(){
     imp:sdImpV};
   if(eSDId){const i=S.someday.findIndex(x=>x.id===eSDId);if(i>=0)S.someday[i]=t;}
   else S.someday.push(t);
-  saveS(); closeOv('sdOv'); renderC();
+  saveS(); closeOv('sdOv'); setTimeout(renderSomeday,50);
 }
 function delSD(){
   S.someday=S.someday.filter(x=>x.id!==eSDId);
-  saveS(); closeOv('sdOv'); renderC();
+  saveS(); closeOv('sdOv'); setTimeout(renderSomeday,50);
 }
 function showCtxSD(e,id){
   if(e&&e.preventDefault) e.preventDefault();
   showCtxAt(e,[
     {label:'修正',icon:'✏️',fn:()=>openEditSomeday(id)},
     {label:'今日のTodoに追加',icon:'✅',fn:()=>sdToToday(id)},
-    {label:'削除する',icon:'🗑',fn:()=>{S.someday=S.someday.filter(x=>x.id!==id);saveS();renderC();},red:true},
+    {label:'削除する',icon:'🗑',fn:()=>{S.someday=S.someday.filter(x=>x.id!==id);saveS();renderSomeday();},red:true},
   ]);
 }
 function sdToToday(id){
