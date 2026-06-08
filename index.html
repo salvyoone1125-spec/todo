@@ -74,7 +74,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tp);max-width:430p
   line-height:16px;margin-left:3px;vertical-align:middle;}
 
 /* ── Content ── */
-.content{flex:1;overflow-y:auto;}
+.content{flex:1;overflow-y:auto;padding-bottom:calc(var(--nh) + var(--sab) + 80px);}
 
 /* ── Routine Table ── */
 .slot-label{background:var(--bg);padding:5px 14px;font-size:11px;font-weight:700;
@@ -314,7 +314,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tp);max-width:430p
       </button>
       <div class="hdr-acts">
         <button class="hd-btn" onclick="shiftCal(-1)">‹</button>
-        <button class="hd-btn" onclick="goToday()" title="今日へ">📅</button>
+        <button class="hd-btn" onclick="goToday()" style="font-size:12px;font-weight:700;width:auto;padding:0 8px;border-radius:12px;">今日</button>
         <div class="cal-toggle">
           <button id="btnW" class="cal-tog-btn active" onclick="setCalMode('w')">週</button>
           <button id="btnM" class="cal-tog-btn" onclick="setCalMode('m')">月</button>
@@ -356,6 +356,12 @@ body{font-family:var(--font);background:var(--bg);color:var(--tp);max-width:430p
   <div class="content" id="setC"></div>
 </div>
 
+<!-- SOMEDAY -->
+<div class="page" id="pgSomeday">
+  <div class="pg-hdr"><div class="pg-title" style="color:var(--ac);">📌 いつかやること</div></div>
+  <div class="content" id="sdC"></div>
+</div>
+
 <!-- FAB -->
 <button class="fab" id="fab" onclick="openAdd()">＋</button>
 
@@ -363,6 +369,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tp);max-width:430p
 <nav class="bnav">
   <div class="ni active" id="nHome" onclick="goPage('Home')"><div class="ni-icon">🏠</div><div>ホーム</div></div>
   <div class="ni" id="nStats" onclick="goPage('Stats')"><div class="ni-icon">📊</div><div>統計</div></div>
+  <div class="ni" id="nSomeday" onclick="goPage('Someday')"><div class="ni-icon">📌</div><div>いつか</div></div>
   <div class="ni" id="nTime" onclick="goPage('Time')"><div class="ni-icon">⏱</div><div>時間</div></div>
   <div class="ni" id="nSet" onclick="goPage('Set')"><div class="ni-icon">⚙️</div><div>設定</div></div>
 </nav>
@@ -528,8 +535,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--tp);max-width:430p
         <button class="tog" id="tNotif" onclick="this.classList.toggle('on')"></button>
       </div>
       <div>
-        <div class="f-label">いつ実行する?</div>
-        <input class="f-input" id="tWhen" placeholder="例：朝起きたら、帰宅後" maxlength="40">
+        <div class="f-label">繰り返す曜日</div>
+        <div class="dchips" id="tDs"></div>
       </div>
       <div>
         <div class="f-label">時間フィルター</div>
@@ -539,8 +546,55 @@ body{font-family:var(--font);background:var(--bg);color:var(--tp);max-width:430p
           <button class="tl-chip" id="tF2" onclick="togTF(2)">夜</button>
         </div>
       </div>
+      <div>
+        <div class="f-label">重要度</div>
+        <div class="imp-r" id="tImpR">
+          <span class="imp-s" onclick="setTImp(1)">⭐</span>
+          <span class="imp-s" onclick="setTImp(2)">⭐</span>
+          <span class="imp-s" onclick="setTImp(3)">⭐</span>
+        </div>
+      </div>
+      <div>
+        <div class="f-label">メモ</div>
+        <input class="f-input" id="tNote" placeholder="任意" maxlength="100">
+      </div>
       <button class="save-btn" id="tSv" onclick="saveT()" disabled>保存</button>
       <button class="del-btn" id="tDl" onclick="delT()" style="display:none;">削除</button>
+    </div>
+  </div>
+</div>
+
+<!-- Someday Modal -->
+<div class="ov" id="sdOv" onclick="bgC(event,'sdOv')">
+  <div class="modal">
+    <div class="m-handle"></div>
+    <div class="m-hdr">
+      <div class="m-title" id="sdMT">📌 いつかやることを追加</div>
+      <button class="m-close" onclick="closeOv('sdOv')">✕</button>
+    </div>
+    <div class="m-body">
+      <div>
+        <div class="f-label">タスク名</div>
+        <input class="f-input" id="sdN" placeholder="やることを入力" maxlength="60" oninput="sdChg()">
+      </div>
+      <div>
+        <div class="f-label">希望期限（年月）</div>
+        <input class="f-input" id="sdDL" type="month" placeholder="任意">
+      </div>
+      <div>
+        <div class="f-label">重要度</div>
+        <div class="imp-r" id="sdImpR">
+          <span class="imp-s" onclick="setSDImp(1)">⭐</span>
+          <span class="imp-s" onclick="setSDImp(2)">⭐</span>
+          <span class="imp-s" onclick="setSDImp(3)">⭐</span>
+        </div>
+      </div>
+      <div>
+        <div class="f-label">メモ</div>
+        <input class="f-input" id="sdNote" placeholder="任意" maxlength="100">
+      </div>
+      <button class="save-btn" id="sdSv" onclick="saveSD()" disabled>保存</button>
+      <button class="del-btn" id="sdDl" onclick="delSD()" style="display:none;">削除</button>
     </div>
   </div>
 </div>
@@ -606,11 +660,12 @@ function loadS(){
     return {
       routines:s.routines||defR(),
       todos:s.todos||{},
-      comp:s.comp||{},     // {dk:{rid:true|{secs:N}}}
-      tcomp:s.tcomp||{},   // {dk:{tid:true}}
+      someday:s.someday||[],
+      comp:s.comp||{},
+      tcomp:s.tcomp||{},
       settings:s.settings||{hideDoneR:false,hideDoneT:false},
     };
-  }catch{return{routines:defR(),todos:{},comp:{},tcomp:{},settings:{hideDoneR:false,hideDoneT:false}};}
+  }catch{return{routines:defR(),todos:{},someday:[],comp:{},tcomp:{},settings:{hideDoneR:false,hideDoneT:false}};}
 }
 function saveS(){localStorage.setItem('rtv5',JSON.stringify(S));}
 
@@ -628,14 +683,15 @@ function defR(){
 let curPage='Home';
 function goPage(p){
   curPage=p;
-  ['Home','Stats','Time','Set'].forEach(x=>{
+  ['Home','Stats','Time','Set','Someday'].forEach(x=>{
     document.getElementById('pg'+x).classList.toggle('active',x===p);
     document.getElementById('n'+x).classList.toggle('active',x===p);
   });
-  document.getElementById('fab').style.display=p==='Home'?'flex':'none';
-  if(p==='Stats')renderSt();
-  if(p==='Time')renderTL();
-  if(p==='Set')renderSet();
+  document.getElementById('fab').style.display=(p==='Home'||p==='Someday')?'flex':'none';
+  if(p==='Stats') renderSt();
+  if(p==='Time') renderTL();
+  if(p==='Set') renderSet();
+  if(p==='Someday') renderSomeday();
 }
 
 // ═══ WEEK ═══
@@ -742,6 +798,11 @@ function renderC(){
   if(curTab==='r') renderRoutine();
   else if(curTab==='t') renderTodo();
   else renderSchedule();
+}
+function openAdd(){
+  if(curPage==='Someday') openEditSomeday(null);
+  else if(curTab==='r') openEditR(null);
+  else openEditT(null);
 }
 function updateBadge(){
   const n=(S.todos[curDK]||[]).filter(t=>!(S.tcomp[curDK]||{})[t.id]).length;
@@ -1010,22 +1071,34 @@ function doneR(rid){
 
 // ═══ TODO ═══
 function renderTodo(){
-  const todos=S.todos[curDK]||[];
+  const selDate=dFromDK(curDK);
+  const ds=DKs[selDate.getDay()];
+  // 繰り返し曜日設定のあるTODOを他の日付から引っ張る
+  const repeating=Object.values(S.todos).flat().filter(t=>
+    (t.days||[]).includes(ds) && !(S.todos[curDK]||[]).find(x=>x.id===t.id)
+  );
+  const todos=[...(S.todos[curDK]||[]),...repeating];
   const tcomp=S.tcomp[curDK]||{};
-  const vis=S.settings.hideDoneT?todos.filter(t=>!tcomp[t.id]):todos;
+  let vis=S.settings.hideDoneT?todos.filter(t=>!tcomp[t.id]):todos;
+  // 完了を下へ
+  vis=[...vis.filter(t=>!tcomp[t.id]),...vis.filter(t=>!!tcomp[t.id])];
   const main=document.getElementById('mainC');
   if(!vis.length){
     main.innerHTML=`<div class="empty"><div class="empty-icon">✅</div><div>To-doを追加しましょう</div></div>`;
     return;
   }
-  main.innerHTML=vis.map((t,i)=>{
+  main.innerHTML=vis.map(t=>{
     const done=!!tcomp[t.id];
+    const impStars=t.imp?'⭐'.repeat(t.imp):'';
     return`<div class="td-row${done?' done':''}"
       ontouchstart="lpStart(event,'t','${t.id}')"
       ontouchend="lpEnd()" ontouchmove="lpEnd()">
       <div class="td-body" onclick="showCtxT(event,'${t.id}')">
         <span class="td-todo-icon">TO<br>DO</span>
-        <span class="td-text">${escH(t.name)}</span>
+        <div style="flex:1;overflow:hidden;">
+          <div class="td-text">${escH(t.name)}${impStars?` <span style="font-size:11px;">${impStars}</span>`:''}</div>
+          ${t.note?`<div style="font-size:11px;color:var(--ts);margin-top:2px;">${escH(t.note)}</div>`:''}
+        </div>
       </div>
       <div class="td-chk${done?' on':''}" onclick="tapT('${t.id}')">${done?'✓':''}</div>
     </div>`;
@@ -1101,10 +1174,32 @@ function delRById(id){
 function lpStart(e,type,id){
   lpTimer=setTimeout(()=>{
     if(type==='r') showCtxR(e,id);
+    else if(type==='sd') showCtxSD(e,id);
     else showCtxT(e,id);
   },500);
 }
 function lpEnd(){ clearTimeout(lpTimer); }
+
+// ═══ SWIPE NAVIGATION ═══
+(function(){
+  let sx=0,sy=0;
+  const el=document.getElementById('mainC');
+  el.addEventListener('touchstart',e=>{sx=e.touches[0].clientX;sy=e.touches[0].clientY;},{passive:true});
+  el.addEventListener('touchend',e=>{
+    const dx=e.changedTouches[0].clientX-sx;
+    const dy=e.changedTouches[0].clientY-sy;
+    if(Math.abs(dx)>60&&Math.abs(dx)>Math.abs(dy)*1.5){
+      const base=dFromDK(curDK);
+      const nd=new Date(base);
+      nd.setDate(base.getDate()+(dx<0?1:-1));
+      curDK=dk(nd); viewD=new Date(nd);
+      const todSun=new Date();todSun.setDate(new Date().getDate()-new Date().getDay());
+      const selSun=new Date(nd);selSun.setDate(nd.getDate()-nd.getDay());
+      wOff=Math.round((selSun-todSun)/(7*86400000));
+      renderW(); renderC();
+    }
+  },{passive:true});
+})();
 
 // ═══ MONTH CAL ═══
 function openMCal(){
@@ -1200,7 +1295,7 @@ function rChg(){
   document.getElementById('rPrevIcon').textContent=e||'🌱';
 }
 
-function openAdd(){ curTab==='r'?openEditR(null):openEditT(null); }
+// openAdd defined above in switchTab section
 
 function openEditR(id){
   eRId=id; rImpV=0; rCI=0; rDaysV=new Set(DKs); rTrkVal=false; rTimeFilter=new Set();
@@ -1273,20 +1368,26 @@ function delR(){
 }
 
 // ═══ TODO MODAL ═══
-let tTimeFilter=new Set();
+let tTimeFilter=new Set(), tImpV=0, tDaysV=new Set();
 function togTF(i){
   tTimeFilter.has(i)?tTimeFilter.delete(i):tTimeFilter.add(i);
   [0,1,2].forEach(j=>document.getElementById('tF'+j).classList.toggle('sel',tTimeFilter.has(j)));
 }
+function setTImp(v){tImpV=tImpV===v?0:v;updateImp('tImpR',tImpV);}
+
+function togTD(d,el){tDaysV.has(d)?tDaysV.delete(d):tDaysV.add(d);el.classList.toggle('sel',tDaysV.has(d));}
 
 function openEditT(id){
-  eTId=id; tTimeFilter=new Set();
+  eTId=id; tTimeFilter=new Set(); tImpV=0; tDaysV=new Set();
   document.getElementById('tN').value='';
   document.getElementById('tDate').value=dkToInput(curDK);
-  document.getElementById('tWhen').value='';
+  document.getElementById('tNote').value='';
   document.getElementById('tNotif').className='tog';
-  tTimeFilter=new Set();
   [0,1,2].forEach(j=>document.getElementById('tF'+j).classList.remove('sel'));
+  updateImp('tImpR',0);
+  document.getElementById('tDs').innerHTML=DKs.map((d,i)=>
+    `<div class="dchip" onclick="togTD('${d}',this)">${DJ[i]}</div>`
+  ).join('');
   document.getElementById('tSv').disabled=true;
   document.getElementById('tDl').style.display='none';
   document.getElementById('tMT').textContent=id?'✏️ To-doを編集':'✅ To-doを追加';
@@ -1295,10 +1396,16 @@ function openEditT(id){
     if(t){
       document.getElementById('tN').value=t.name;
       document.getElementById('tDate').value=t.date?dkToInput(t.date):dkToInput(curDK);
-      document.getElementById('tWhen').value=t.when||'';
+      document.getElementById('tNote').value=t.note||'';
       if(t.notif) document.getElementById('tNotif').classList.add('on');
       tTimeFilter=new Set(t.tf||[]);
+      tImpV=t.imp||0;
+      tDaysV=new Set(t.days||[]);
       [0,1,2].forEach(j=>document.getElementById('tF'+j).classList.toggle('sel',tTimeFilter.has(j)));
+      updateImp('tImpR',tImpV);
+      document.getElementById('tDs').innerHTML=DKs.map((d,i)=>
+        `<div class="dchip${tDaysV.has(d)?' sel':''}" onclick="togTD('${d}',this)">${DJ[i]}</div>`
+      ).join('');
       document.getElementById('tSv').disabled=false;
       document.getElementById('tDl').style.display='';
     }
@@ -1315,9 +1422,11 @@ function saveT(){
   const t={
     id:eTId||'t'+Date.now(),name,
     date:targetDK,
-    when:document.getElementById('tWhen').value.trim(),
     notif:document.getElementById('tNotif').classList.contains('on'),
     tf:[...tTimeFilter],
+    days:[...tDaysV],
+    imp:tImpV,
+    note:document.getElementById('tNote').value.trim(),
   };
   if(!S.todos[targetDK]) S.todos[targetDK]=[];
   if(eTId){
@@ -1334,6 +1443,96 @@ function saveT(){
 function delT(){
   S.todos[curDK]=(S.todos[curDK]||[]).filter(x=>x.id!==eTId);
   saveS(); closeOv('tOv'); renderC();
+}
+
+// ═══ SOMEDAY ═══
+let eSDId=null, sdImpV=0;
+function setSDImp(v){sdImpV=sdImpV===v?0:v;updateImp('sdImpR',sdImpV);}
+function sdChg(){document.getElementById('sdSv').disabled=!document.getElementById('sdN').value.trim();}
+
+function renderSomeday(){
+  const main=document.getElementById('sdC');
+  if(!main) return;
+  if(!S.someday.length){
+    main.innerHTML=`<div class="empty"><div class="empty-icon">📌</div><div>いつかやることを追加しましょう</div></div>`;
+    return;
+  }
+  const sorted=[...S.someday].sort((a,b)=>{
+    if(!a.dl&&!b.dl) return 0;
+    if(!a.dl) return 1;
+    if(!b.dl) return -1;
+    return a.dl.localeCompare(b.dl);
+  });
+  main.innerHTML=sorted.map(t=>{
+    const impStars=t.imp?'⭐'.repeat(t.imp):'';
+    const dlLabel=t.dl?`${t.dl.slice(0,4)}年${parseInt(t.dl.slice(5))}月まで`:'期限なし';
+    return`<div class="td-row"
+      ontouchstart="lpStart(event,'sd','${t.id}')"
+      ontouchend="lpEnd()" ontouchmove="lpEnd()">
+      <div class="td-body" onclick="showCtxSD(event,'${t.id}')">
+        <span class="td-todo-icon" style="font-size:7px;">いつ<br>か</span>
+        <div style="flex:1;overflow:hidden;">
+          <div class="td-text">${escH(t.name)}${impStars?` <span style="font-size:11px;">${impStars}</span>`:''}</div>
+          <div style="font-size:11px;color:var(--ts);margin-top:2px;">${dlLabel}${t.note?' · '+escH(t.note):''}</div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openEditSomeday(id){
+  eSDId=id; sdImpV=0;
+  document.getElementById('sdN').value='';
+  document.getElementById('sdDL').value='';
+  document.getElementById('sdNote').value='';
+  updateImp('sdImpR',0);
+  document.getElementById('sdSv').disabled=true;
+  document.getElementById('sdDl').style.display='none';
+  document.getElementById('sdMT').textContent=id?'✏️ 編集':'📌 いつかやることを追加';
+  if(id){
+    const t=S.someday.find(x=>x.id===id);
+    if(t){
+      document.getElementById('sdN').value=t.name;
+      document.getElementById('sdDL').value=t.dl||'';
+      document.getElementById('sdNote').value=t.note||'';
+      sdImpV=t.imp||0;
+      updateImp('sdImpR',sdImpV);
+      document.getElementById('sdSv').disabled=false;
+      document.getElementById('sdDl').style.display='';
+    }
+  }
+  openOv('sdOv');
+  setTimeout(()=>document.getElementById('sdN').focus(),200);
+}
+function saveSD(){
+  const name=document.getElementById('sdN').value.trim();
+  if(!name) return;
+  const t={id:eSDId||'sd'+Date.now(),name,
+    dl:document.getElementById('sdDL').value,
+    note:document.getElementById('sdNote').value.trim(),
+    imp:sdImpV};
+  if(eSDId){const i=S.someday.findIndex(x=>x.id===eSDId);if(i>=0)S.someday[i]=t;}
+  else S.someday.push(t);
+  saveS(); closeOv('sdOv'); renderC();
+}
+function delSD(){
+  S.someday=S.someday.filter(x=>x.id!==eSDId);
+  saveS(); closeOv('sdOv'); renderC();
+}
+function showCtxSD(e,id){
+  if(e&&e.preventDefault) e.preventDefault();
+  showCtxAt(e,[
+    {label:'修正',icon:'✏️',fn:()=>openEditSomeday(id)},
+    {label:'今日のTodoに追加',icon:'✅',fn:()=>sdToToday(id)},
+    {label:'削除する',icon:'🗑',fn:()=>{S.someday=S.someday.filter(x=>x.id!==id);saveS();renderC();},red:true},
+  ]);
+}
+function sdToToday(id){
+  const t=S.someday.find(x=>x.id===id);
+  if(!t) return;
+  if(!S.todos[curDK]) S.todos[curDK]=[];
+  S.todos[curDK].push({id:'t'+Date.now(),name:t.name,note:t.note,imp:t.imp,tf:[],date:curDK});
+  saveS(); switchTab('t');
 }
 
 // ═══ STATS ═══
@@ -1531,6 +1730,11 @@ function renderSet(){
         <span style="color:var(--ts);font-size:13px;">›</span>
         <input type="file" id="importInput" accept=".json" style="display:none;" onchange="importJSON(event)">
       </div>
+      <div class="srow" style="cursor:pointer;" onclick="downloadHandover()">
+        <span class="srow-icon">📋</span>
+        <div class="srow-label">引き継ぎ書をダウンロード</div>
+        <span style="color:var(--ts);font-size:13px;">›</span>
+      </div>
     </div>
 
     <!-- 危険ゾーン -->
@@ -1623,6 +1827,98 @@ function loadWallpaper(e){
 }
 function resetWallpaper(){ delete S.settings.wallpaper; saveS(); renderSet(); }
 
+function downloadHandover(){
+  const today=new Date().toLocaleDateString('ja-JP');
+  const rCount=S.routines.length;
+  const routineList=S.routines.map(r=>{
+    const days=r.days.join('/');
+    const trk=r.trk==='time'?'時間計測':r.trk==='stamp'?'タイムスタンプ':'なし';
+    const tf=(r.tf||[]).map(i=>['午前','午後','夜'][i]).join('/');
+    return `- ${r.emoji||''}${r.name}｜${r.when||pad(r.sh)+':'+pad(r.sm)}｜${days}｜トラッキング:${trk}${tf?' ('+tf+')':''}`;
+  }).join('\n');
+
+  const md=`# ルーティン & ToDo アプリ 引き継ぎ書
+作成日: ${today}
+
+## アプリURL
+https://merry-squirrel-2a6471.netlify.app/
+
+## 使い方
+ブラウザで上記URLを開くだけで使えます。
+iPhoneは「ホーム画面に追加」でアプリっぽく使えます。
+
+---
+
+## データの引き継ぎ方
+
+### 旧端末（渡す側）
+1. アプリを開く
+2. 設定タブ → 「JSONでエクスポート」をタップ
+3. ダウンロードされた \`routodo_YYYY-MM-DD.json\` ファイルを相手に送る
+
+### 新端末（受け取る側）
+1. アプリを開く（https://merry-squirrel-2a6471.netlify.app/）
+2. 設定タブ → 「JSONでインポート」をタップ
+3. 受け取った .json ファイルを選択 → データが復元される
+
+---
+
+## 現在登録されているルーティン（${rCount}件）
+
+${routineList||'（なし）'}
+
+---
+
+## 機能一覧
+
+### ホーム画面
+| タブ | 内容 |
+|------|------|
+| ルーティン | 毎日のルーティンをリスト表示。左側に「いつ実行する？」を表示 |
+| To-do | その日のTODOリスト |
+| スケジュール | 縦の時間軸（6〜24時）にルーティン・TODOをブロック表示 |
+
+### ルーティンの操作
+- **タップ** → メニュー（修正 / コピー / 終了 / 削除する）
+- **アクションボタン（右端）** → チェック・計測の開始/停止
+- **トラッキングモード**
+  - なし: チェックのみ
+  - 時間計測: ▶で開始、⏹で停止して経過時間を記録
+  - タイムスタンプ: チェックした時刻(HH:MM)を記録
+
+### TODOの操作
+- **行タップ** → メニュー（修正 / コピー / 持ち越す / 削除する）
+- **チェックボックス（右端）** → 完了/未完了のトグル
+- 修正画面で日付・時間フィルター・通知などを設定可能
+
+### ヘッダーカレンダー
+- **週** / **月** トグルで切り替え
+- **📅** で今日へ移動
+- **‹ ›** で前後の週/月へ移動
+
+---
+
+## 設定
+- テーマカラー: 20種類から選択
+- 完了済みを隠す: ルーティン・TODOそれぞれ設定可能
+- データのエクスポート/インポート: JSON形式
+
+---
+
+## 技術情報（開発者向け）
+- **構成**: シングルHTMLファイル（フレームワーク・ビルドツールなし）
+- **データ保存**: localStorage（キー: \`rtv5\`）
+- **デプロイ**: Netlify（app.netlify.com → Deploys にフォルダをドロップ）
+- **日付キー形式**: \`YYYY-M-D\`（月は0起算、ゼロ埋めなし）
+`;
+
+  const blob=new Blob([md],{type:'text/markdown;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`引き継ぎ書_routodo_${new Date().toISOString().slice(0,10)}.md`;
+  a.click();
+}
+
 function exportJSON(){
   const blob=new Blob([JSON.stringify(S,null,2)],{type:'application/json'});
   const a=document.createElement('a');
@@ -1671,7 +1967,7 @@ function textColor(hex){
 }
 
 // Prevent Enter from saving (user must tap 保存 button)
-['rN','rE','rNote','rTag','rWhen','tN','tWhen'].forEach(id=>{
+['rN','rE','rNote','rTag','rWhen','tN','tNote','sdN','sdNote'].forEach(id=>{
   const el=document.getElementById(id);
   if(el) el.addEventListener('keydown',e=>{if(e.key==='Enter')e.preventDefault();});
 });
